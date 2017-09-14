@@ -1,0 +1,22 @@
+{
+  "apps": [
+    {
+      "name": "smartHome_netServer",
+      "exec_mode":"cluster",
+      "instances":0,
+      "script": "./appNet.js",
+      "cwd": "/home/project/restServer/",
+      "watch": [
+        "config",
+        "routes",
+        "views"
+      ],
+      "ignore_watch":["logs"],
+      "restart_delay": 5000,
+      "pid_file":"./logs/net.pid",
+      "error_file": "./logs/netsite-err.log",
+      "out_file": "./logs/netsite-out.log",
+      "log_date_format": "YYYY-MM-DD HH:mm Z"
+    }
+  ]
+}

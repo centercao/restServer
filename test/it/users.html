@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <script type="text/javascript" src="javascripts/jquery-3.1.1.min.js"></script>
+    <style type="text/css">
+    </style>
+    <script type="text/javascript">
+    </script>
+    <style type="text/css">
+        body{
+            margin: 0px;
+            background: #333;
+        }
+    </style>
+</head>
+<body>
+<div>
+    <p>
+        <button onclick="get()">Test get()</button>
+    </p>
+    <p>
+    <button onclick="post()">Test post()</button>
+</p>
+    <p>
+        <button onclick="put()">Test put()</button>
+    </p>
+    <p>
+        <button onclick="del()">Test del()</button>
+    </p>
+<script language="javascript">
+    $(document).ready(function() {
+        // put();
+         // deleteFun();
+        // get();
+        // post();
+            });
+    function get() { // get
+        $.ajax({
+            cache: true,
+            type: "GET",
+            url: "http://127.0.0.1:3000/users?name='avdf'",
+            data:{devId:23,hostId:345},
+            async: false,
+	        timeout: 60000,
+            error: function(request) {
+                alert("Connection error!");
+            },
+            success: function(res) {
+                if (!res) {
+                    alert("Connect error!");
+                    return ;
+                }
+            }
+        });
+    }
+    function post() { // add
+	    $.ajax({
+		    cache: true,
+		    type: "POST",
+		    url: "http://127.0.0.1:3000/users",
+		    data:{id:90,hostId:80},
+		    async: false,
+		    timeout: 60000,
+		    error: function(request) {
+			    alert("Connection error!");
+		    },
+		    success: function(res) { // json
+			    if (!res) {
+				    alert("Connect error!");
+				    return ;
+			    }
+		    }
+	    });
+    }
+    function put() { // update
+	    $.ajax({
+		    cache: true,
+		    type: "PUT",
+            dataType: 'json',
+		    url: "http://127.0.0.1:3000/users/678",
+		    data:{ok:123,hostId:2345},
+		    async: false,
+		    error: function(req,textStatus, errorThrown) {
+			    alert("Connection error!");
+		    },
+		    success: function(res) { // json
+			    if (!res) {
+				    alert("Connect error!");
+				    return ;
+			    }
+		    }
+	    });
+    }
+
+    function del() { // delete
+        $.ajax({
+            cache: true,
+            type: "DELETE",
+            url: "http://127.0.0.1:3000/users/998",
+            data:{ok:123,hostId:2345},
+            async: false,
+            error: function(request) {
+                alert("Connection error!");
+            },
+            success: function(res) { // json
+                if (!res) {
+                    alert("Connect error!");
+                    return ;
+                }
+            }
+        });
+    }
+</script>
+        </div>
+    </body>
+</html>

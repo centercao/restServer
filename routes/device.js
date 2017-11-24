@@ -7,7 +7,26 @@ var redis = require('../utils/redisHelper');
 var CMD = require("../middlewares/apiCmd");
 var eventPool = require("../utils/eventPoolHelper");
 
-var shortid=require('js-shortid');
+var shortId=require('js-shortid');
+
+var path = require('path');
+var fs = require("fs");
+var imgPath = path.resolve(__dirname, '..') + "/public/";
+const multer = require('koa-multer');//加载koa-multer模块
+//配置
+var storage = multer.diskStorage({
+	//文件保存路径
+	destination: function (req, file, cb) {
+		cb(null, 'public/images/')
+	},
+	//修改文件名称
+	filename: function (req, file, cb) {
+		var fileFormat = (file.originalname).split(".");
+		cb(null,shortId.gen() + "." + fileFormat[fileFormat.length - 1]);
+	}
+});
+//加载配置
+var upload = multer({ storage: storage });
 
 router.get('/', async function (ctx, next) {
 	var token = ctx.request.query.token;
@@ -87,9 +106,10 @@ router.delete('/mac/:id', async function (ctx, next) {
 	}
 	redis.pub.publish("control",JSON.stringify({cmd:CMD.RELEASE_BIND_CMD,id:id,gId:gId}));
 	var data = await eventPool.operate("macReleaseBind",{gId:gId});
-	ctx.body = {
-		data:data
-	};
+	if(data.res == 200){
+		redis.hset("device:" + id,"state",0);
+	}
+	ctx.body = data;
 });
 // mac 绑定
 router.post('/mac/:id', async function (ctx, next) {
@@ -108,6 +128,71 @@ router.post('/mac/:id', async function (ctx, next) {
 		data:data
 	};
 });
-
+// 上传图像 id=deviceId
+router.post('/image/:id',upload.single('file'), async function (ctx, next) {
+	// var body = ctx.request.body;
+	var deviceId = ctx.params.id;
+	if (!deviceId) {
+		throw new ApiError(ApiError.DATA_IS_EMPTY);
+		return false;
+	}
+	var image = await redis.hget("device:" + deviceId, "image")||"";
+	if(image){
+		var curPath = imgPath + image;
+		if(fs.existsSync(curPath)) {
+			fs.unlinkSync(curPath);
+		}
+	}
+	await redis.hset("device:" + deviceId, "image", "images/" + ctx.req.file.filename);
+	await  redis.save();
+	ctx.body = {
+		filename: ctx.req.file.filename //返回文件名
+	};
+});
+function  readData(path){
+	return new Promise(function(resolve,reject){
+		fs.readFile(path,function(err,data){
+			if(err){
+				reject(err);//文件存在返回true
+			}else{
+				resolve(data);//文件不存在，这里会抛出异常
+			}
+		});
+	}).then(function(data){
+		console.log(data);
+		return data;
+	},function(err){
+		console.log(err);
+		return err;
+	});
+}
+// 下载像 id=deviceId
+router.get('/image/:id', async function (ctx, next) {
+	var body = ctx.request.body;
+	var deviceId = ctx.params.id;
+	if (!deviceId) {
+		throw new ApiError(ApiError.DATA_IS_EMPTY);
+		return false;
+	}
+	var image = await redis.hget("device:" + deviceId,"image")||"";
+	if(!image){
+		throw new ApiError(ApiError.USER_NOT_IMAGE);
+		return false;
+	}
+	if(image){
+		var curPath = imgPath + image;
+		if(fs.existsSync(curPath)) {
+			// ctx.upload = "image";
+			var info =await readData(imgPath + image);
+			ctx.body=info.toString("base64");
+		}else{
+			throw new ApiError(ApiError.USER_NOT_IMAGE);
+			return false;
+		}
+	} else {
+		throw new ApiError(ApiError.USER_NOT_IMAGE);
+		return false;
+	}
+});
 module.exports = router;
 

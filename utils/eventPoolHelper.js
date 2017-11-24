@@ -50,6 +50,11 @@ exports.operate=function (key,info) {
 			var data = JSON.parse(message);
 			if(data.gId == info.gId){
 				resolve(data);
+			}else{
+				var error = new Error("gId error");
+				error.number = 118;
+				Event.remove(key,backFun);
+				reject(error);
 			}
 		};
 		Event.listen(key,backFun);
@@ -58,6 +63,6 @@ exports.operate=function (key,info) {
 			error.number = 117;
 			Event.remove(key,backFun);
 			reject(error);
-		},20000);
+		},5000);
 	});
 };

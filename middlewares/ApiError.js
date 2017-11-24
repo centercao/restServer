@@ -51,6 +51,7 @@ ApiError.DEVICE_NO_EXISTS  = "device no exists";
 ApiError.CODE_ERROR  = "code error";
 ApiError.USER_NOT_IMAGE  = "user not image";
 ApiError.GATE_NOT_DEVICE  = "device not in gateway";
+ApiError.GATE_EZVIZ_TOKEN  = "ezviz get token fail";
 
 // 网关服务器错误
 ApiError.NOT_REGISTER = "not register";
@@ -82,6 +83,7 @@ error_map.set(ApiError.NONE_GATEWAY, { number: 120, message: '设备不是网关
 error_map.set(ApiError.DEVICE_NO_EXISTS, { number: 121, message: '设备不存在' });
 error_map.set(ApiError.CODE_ERROR, { number: 122, message: '验证码错误' });
 error_map.set(ApiError.USER_NOT_IMAGE, { number: 123, message: '用户头像不存在' });
+error_map.set(ApiError.GATE_EZVIZ_TOKEN, { number: 124, message: '获取萤石云Token错误' });
 
 // 网关服务器错误
 error_map.set(ApiError.NOT_REGISTER, { number: 201, message: '网关未注册' });

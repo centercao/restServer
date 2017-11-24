@@ -143,6 +143,8 @@ const gateway = require('./routes/gateway');
 const find = require('./routes/find');
 const scene = require('./routes/scene');
 const attribute = require('./routes/attribute');
+const video = require('./routes/video');
+const knowledge = require('./routes/knowledge');
 router.use('/', index.routes(), index.allowedMethods());
 router.use('/users', users.routes(), users.allowedMethods());
 router.use('/teams', teams.routes(), teams.allowedMethods());
@@ -157,6 +159,8 @@ router.use('/gateway', gateway.routes(), gateway.allowedMethods());
 router.use('/find', find.routes(), find.allowedMethods());
 router.use('/scene', scene.routes(), scene.allowedMethods());
 router.use('/attribute', attribute.routes(), attribute.allowedMethods());
+router.use('/video', video.routes(), video.allowedMethods());
+router.use('/knowledge', knowledge.routes(), knowledge.allowedMethods());
 app.use(router.routes(), router.allowedMethods());
 
 // response

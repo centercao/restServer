@@ -72,27 +72,52 @@ redis.sub.on('message', function (channel, message) {
 			case CMD.SCENE_SET_CMD :{
 				var ctx = cet.getContext(info.gId);
 				if(ctx){
-					var dataBuffer = new Buffer(8);
-					dataBuffer.writeUInt8(CMD.SERVER_SCENE_SET, 0);
-					dataBuffer.writeUInt8(info.type,1);
-					var startTime = info.startTime.split(":");
-					dataBuffer.writeUInt8(Number(startTime[0]),2);
-					dataBuffer.writeUInt8(Number(startTime[1]),3);
-					dataBuffer.writeUInt8(Number(startTime[2]),4);
-					var endTime = info.endTime.split(":");
-					dataBuffer.writeUInt8(Number(endTime[0]),5);
-					dataBuffer.writeUInt8(Number(endTime[1]),6);
-					dataBuffer.writeUInt8(Number(endTime[2]),7);
+					var dataBuffer = null;
+					if(info.type == 1){
+						dataBuffer = new Buffer(24);
+						dataBuffer.writeUInt8(CMD.SERVER_SCENE_SET, 0);
+						dataBuffer.writeUInt8(info.type,1);
+						dataBuffer.write(info.id,2,16);
+						var startTime = info.startTime.split(":");
+						dataBuffer.writeUInt8(Number(startTime[0]),18); // hour
+						dataBuffer.writeUInt8(Number(startTime[1]),19); // minuter
+						dataBuffer.writeUInt8(Number(startTime[2]),20); // second
+						var endTime = info.endTime.split(":");
+						dataBuffer.writeUInt8(Number(endTime[0]),21);
+						dataBuffer.writeUInt8(Number(endTime[1]),22);
+						dataBuffer.writeUInt8(Number(endTime[2]),23);
+					}else{
+						dataBuffer = new Buffer(3);
+						dataBuffer.writeUInt8(CMD.SERVER_SCENE_SET, 0);
+						dataBuffer.writeUInt8(info.type,1);
+						dataBuffer.writeUInt8(info.typeCmd,2);
+					}
 					sendData(ctx,CMD.SERVER_DOWN,dataBuffer);
 				}else{
 					var backInfo = {};
 					backInfo.status = (new ApiError(ApiError.NOT_REGISTER)).number;
 					backInfo.gid = info.id;
 					backInfo.id = 0;
-					redis.pub.publish("reControl",JSON.stringify(backInfo));
+					redis.pub.publish("sceneSet",JSON.stringify(backInfo));
 				}
 			}
 				break;
+			case CMD.SCENE_READ_CMD:{
+				var ctx = cet.getContext(info.gId);
+				if(ctx){
+					var dataBuffer = new Buffer(17);
+					dataBuffer.writeUInt8(CMD.SCENE_READ_GET, 0);
+					dataBuffer.write(info.id,1,16);
+					sendData(ctx,CMD.SERVER_DOWN,dataBuffer);
+				}else{
+					var backInfo = {};
+					backInfo.status = (new ApiError(ApiError.NOT_REGISTER)).number;
+					backInfo.gid = info.id;
+					backInfo.id = info.id;
+					redis.pub.publish("reControl",JSON.stringify(backInfo));
+				}
+			}
+			break;
 			case CMD.ATT_READ_CMD :{
 				var ctx = cet.getContext(info.gId);
 				if(ctx){

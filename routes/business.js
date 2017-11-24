@@ -67,46 +67,6 @@ routes.use(CMD.GATEWAY_REPORT,async function (ctx,next) {
 					};
 					ctx.mqttClient = mqtt.connect('mqtts://' + options.host, options);
 				}
-				/*ctx.mqttClient.subscribe("set/" + ctx.request.clientId,{qos:0});
-				ctx.mqttClient.subscribe("bk/" + ctx.request.clientId,{qos:0});
-				client.on('message', function(topic, message) {
-					switch (topic){
-						case "set/" + ctx.request.clientId:{
-							let cmd = message.readUint8(0);
-							switch (cmd){
-								case 100:{ // 解除报警
-								}
-									break;
-								case 101:{ // 解除绑定
-								}
-									break;
-								case 102:{ // 场景设置
-								}
-									break;
-								case 103:{ // 设置传感器阈值
-								}
-									break;
-								case 104:{ // 查询传感器阈值
-								}
-									break;
-								case 105:{ // 设置网络开放时间
-								}
-									break;
-								case 106:{ // 查询网络开放时间
-								}
-									break;
-								default:
-									break;
-							}
-						}
-							break;
-						case "bk/" + ctx.request.clientId:{
-						}
-							break;
-						default:
-							break;
-					}
-				});*/
 			} else{
 				ctx.request.clientId = 0;
 				throw new ApiError(ApiError.REGISTER_FAIL);
@@ -230,44 +190,49 @@ routes.use(CMD.GATEWAY_REPORT,async function (ctx,next) {
 				console.log("devId:" + devId);
 				var num = ctx.request.data.readUInt8(17);
 				let pos = 18;
-				var info = {};
+				var info = null;
 				for(let i = 0;i<num;i++){
 					let type = ctx.request.data.readUInt8(pos++);
 					switch (type){
 						case 0:{ // 报警
 							let alarm = ctx.request.data.readUInt8(pos++);
+							info = {};
 							info["alarm"] = alarm;
 							if(alarm == 1){
 								redis.pub.publish("alert",JSON.stringify({devId:devId,gId:ctx.request.clientId}));
 							}
 							await redis.hset("device:" + devId,"state",alarm?2:1); // 在线
-							var buffer = new Buffer(17);
-							buffer.writeUInt8(2,0);
-							buffer.write(devId,1,16);
-							ctx.mqttClient.publish('a/' + ctx.request.clientId, buffer);
-							var cIds = await redis.smembers("gateTui:" + ctx.request.clientId);
-							for(let i =0;i<cIds.length;i++){
-								//tran.sendMessage("报警",{cmd: "alarm", data: {id:devId}},cIds[i]);
+							if(alarm == 1){
+								var buffer = new Buffer(17);
+								buffer.writeUInt8(2,0);
+								buffer.write(devId,1,16);
+								ctx.mqttClient.publish('a/' + ctx.request.clientId, buffer);
+								/*var cIds = await redis.smembers("gateTui:" + ctx.request.clientId);
+								for(let i =0;i<cIds.length;i++){
+									//tran.sendMessage("报警",{cmd: "alarm", data: {id:devId}},cIds[i]);
+								}*/
 							}
 						}
 							break;
 						case 1:{ // 电池电量百分比
 							let val = ctx.request.data.readUInt8(pos++);
-							info["battery"] = val + "%"; // 电量百分比
+							// info = {};
+							// info["battery"] = val + "%"; // 电量百分比
 							var buffer = new Buffer(18);
 							buffer.writeUInt8(20,0);
 							buffer.write(devId,1,16);
 							buffer.writeUInt8(val,17);
 							ctx.mqttClient.publish('i/' + ctx.request.clientId, buffer);
-							var cIds = await redis.smembers("gateTui:" + ctx.request.clientId);
+							/*var cIds = await redis.smembers("gateTui:" + ctx.request.clientId);
 							for(let i =0;i<cIds.length;i++){
 								//tran.sendMessage("信息",{cmd: "battery", data: {id:devId,val:val + "%"}},cIds[i]);
-							}
+							}*/
 						}
 							break;
 						case 2:{ // 电池电量状态提示
 							let state = ctx.request.data.readUInt8(pos++);
-							info["batteryState"] = state; // 电池电量状态
+							// info = {};
+							// info["batteryState"] = state; // 电池电量状态
 							var buffer = new Buffer(18);
 							buffer.writeUInt8(21,0);
 							buffer.write(devId,1,16);
@@ -284,6 +249,7 @@ routes.use(CMD.GATEWAY_REPORT,async function (ctx,next) {
 							redis.pub.publish("state", JSON.stringify({
 								devId: devId, gId: ctx.request.clientId, state: state, type: 7
 							}));
+							info = {};
 							info["state"] = state;
 							
 							var buffer = new Buffer(18);
@@ -300,7 +266,8 @@ routes.use(CMD.GATEWAY_REPORT,async function (ctx,next) {
 						case 4:{ // 传感器模拟值
 							let val = ctx.request.data.readUInt16BE(pos++);
 							pos++;
-							info["value"] = val
+							info = {};
+							info["value"] = val;
 							var buffer = new Buffer(20);
 							buffer.writeUInt8(22,0);
 							buffer.write(devId,1,16);
@@ -316,8 +283,11 @@ routes.use(CMD.GATEWAY_REPORT,async function (ctx,next) {
 						default:
 							break;
 					}
-					console.log("info:" + JSON.stringify(info));
-					await ctx.mongo.collection('devInfo').insertOne({devId:devId,startDate:new Date(), val:info});
+					if(info){
+						console.log("info:" + JSON.stringify(info));
+						await ctx.mongo.collection('devInfo').insertOne({devId:devId,startDate:new Date(), val:info});
+						info = null;
+					}
 				}
 				ctx.response.data = new Buffer(3);
 				ctx.response.data.writeUInt8(CMD.SERVER_REPLY_ATT);
@@ -365,15 +335,24 @@ routes.use(CMD.GATEWAY_REPLY,async function (ctx,next) {
 			redis.pub.publish("replyAlarmRelease",JSON.stringify({gId:ctx.request.clientId,id:devId,status:res}));
 		}
 			break;
-		case CMD.GATEWAY_BIND_REPLY: // 解除绑定回复
+		case CMD.GATEWAY_RELEASE_BIND_REPLY: // 解除绑定回复
 		{
 			var devId = ctx.request.data.slice(3,19).ToString();
-			redis.pub.publish("replyBindMac",JSON.stringify({gId:ctx.request.clientId,id:devId,res:res}));
+			if(res == 200){
+				await redis.hset("device:" + devId,"mac","");
+			}
+			redis.pub.publish("replyReleaseBindMac",JSON.stringify({gId:ctx.request.clientId,id:devId,res:res}));
 		}
 			break;
 		case CMD.GATEWAY_SCENE_REPLY: // 场景设置回复
 		{
 			redis.pub.publish("replySceneSetting",JSON.stringify({gId:ctx.request.clientId,res:res}));
+		}
+			break;
+		case CMD.SCENE_READ_REPLY: // 场景读取回复
+		{
+			var devId = ctx.request.data.slice(3,19).ToString();
+			redis.pub.publish("sceneRead",JSON.stringify({gId:ctx.request.clientId,res:res,id:devId}));
 		}
 			break;
 		case CMD.GATEWAY_ATTREAD_REPLY: // 属性read回复

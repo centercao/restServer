@@ -37,13 +37,14 @@ CMD.DEVICE_REPORT_ATT = 0x06;   // Zigbee设备属性上报
 CMD.GATEWAY_TIME = 0x07;     // 网关请求服务器时间
 
 CMD.GATEWAY_WARN_REPLY = 0x00; // 解除报警回复
-CMD.GATEWAY_BIND_REPLY = 0x01; // 解除绑定回复
+CMD.GATEWAY_RELEASE_BIND_REPLY = 0x01; // 解除绑定回复
 CMD.GATEWAY_SCENE_REPLY = 0x02;// 场景设置回复
 CMD.GATEWAY_ATTSET_REPLY = 0x03;// 场景设置回复
 CMD.GATEWAY_ATTREAD_REPLY = 0x04;// 场景设置回复
 CMD.GATEWAY_ZIGSET_REPLY = 0x05;// 场景设置回复
 CMD.GATEWAY_ZIGREAD_REPLY = 0x06;// 场景设置回复
 CMD.GATEWAY_ENABLE_REPLY = 0x08;
+CMD.SCENE_READ_REPLY=0x09;
 
 CMD.SERVER_RELEASE_WARN = 0x00; // 服务器解除报警
 CMD.SERVER_RELEASE_BIND = 0x01; // 服务器解除绑定
@@ -54,6 +55,7 @@ CMD.SERVER_SET_ZIGBEE = 0x05;      // 设备属性设置
 CMD.SERVER_READ_ZIGBEE = 0x06;      // 设备属性设置
 CMD.MAC_BIND = 0x07;      // 设备属性设置
 
+
 CMD.SERVER_REPLY_HEART = 0x00;    // 网关心跳回复
 CMD.SERVER_REPLY_REGISTER = 0x01; // 网关注册回复
 CMD.SERVER_REPLY_ONLINE = 0x02;   // 设备上线回复
@@ -63,6 +65,7 @@ CMD.SERVER_REPLY_ATT = 0x05;      // 设备属性回复
 CMD.SERVER_REPLY_LIST = 0x06;     // 网关请求设备列表回复
 CMD.SERVER_REPLY_TIME = 0x07;     // 服务器当前时间
 CMD.SERVER_SEND_DEVENABLE = 0x08;
+CMD.SCENE_READ_GET = 0x09;
 
 
 // 反向控制命令
@@ -78,6 +81,7 @@ CMD.ZIGBEE_READ_CMD = 109;
 CMD.ZIGBEE_SET_CMD = 110;
 CMD.BIND_CMD = 111;
 CMD.DEVICE_ENABLE = 112;
+CMD.SCENE_READ_CMD=113;
 
 cmd_map.set(CMD.UNKNOWN_CMD, {message: '未知命令' });
 cmd_map.set(CMD.HEART_CMD, {message: '心跳命令' });

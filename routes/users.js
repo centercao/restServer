@@ -9,13 +9,13 @@ var shortId = require('js-shortid');
 var md5 = require("../utils/md5");
 var path = require('path');
 var fs = require("fs");
-var imgPath = path.resolve(__dirname, '..') + "/uploads/"
+var imgPath = path.resolve(__dirname, '..') + "/public/";
 const multer = require('koa-multer');//加载koa-multer模块
 //配置
 var storage = multer.diskStorage({
 	//文件保存路径
 	destination: function (req, file, cb) {
-		cb(null, 'uploads/')
+		cb(null, 'public/users/')
 	},
 	//修改文件名称
 	filename: function (req, file, cb) {
@@ -167,7 +167,7 @@ router.post('/image/:id',upload.single('file'), async function (ctx, next) {
 			fs.unlinkSync(curPath);
 		}
 	}
-	await redis.hset("users:" + account, "image", ctx.req.file.filename);
+	await redis.hset("users:" + account, "image", "users/" + ctx.req.file.filename);
 	await  redis.save();
 	ctx.body = {
 		filename: ctx.req.file.filename //返回文件名

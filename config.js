@@ -17,7 +17,9 @@ const development_env = {
 	gPort:8143,
 	gsPort:8243,
 	gHttpPort:8343,
-	gHttpsPort:8443
+	gHttpsPort:8443,
+	appKey:"55ddfa8a01024abf883160fec03a83fc",
+	appSecret:"29fe191a5c55e0c3daf39a2e747dce26"
 };
 const test_env = {
 	netPort:6688,
@@ -34,7 +36,9 @@ const test_env = {
 	gPort:8143,
 	gsPort:8243,
 	gHttpPort:8343,
-	gHttpsPort:8443
+	gHttpsPort:8443,
+	appKey:"55ddfa8a01024abf883160fec03a83fc",
+	appSecret:"29fe191a5c55e0c3daf39a2e747dce26"
 };
 module.exports = {
 	development: development_env,

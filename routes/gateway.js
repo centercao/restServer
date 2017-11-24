@@ -22,23 +22,51 @@ router.get('/', async function (ctx, next) {
 	 throw new ApiError(ApiError.USER_TOKEN_EXPIRE);
 	 return false;
 	 }
-	var result = [];
+	var result = {};
 	var gateways = await redis.smembers("userGate:" + account);
+	var myGate =[];
 	for(var i =0;i<gateways.length;i++){
 		var dev = {};
 		dev.id = gateways[i];
-		var val = await redis.hmget("device:" + gateways[i],"name","trust");
+		var val = await redis.hmget("device:" + gateways[i],"name","image");
 		dev.name = val[0];
-		dev.trust = val[1];
-		result.push(dev);
+		dev["image"] = val[1];
+		dev.trust=[];
+		var trust = await redis.smembers("deviceTrust:" + gateways[i]);
+		for(let j = 0;j<trust.length;j++){
+			let value = await redis.hmget("users:" + trust[j],"name","image");
+			let trustUser = {};
+			trustUser.id = trust[j];
+			trustUser.name = value[0];
+			trustUser.image= value[1];
+			dev.trust.push(trustUser);
+		}
+		myGate.push(dev);
 	}
+	result["owner"] = myGate;
+	var trustGate =[];
 	gateways = await redis.smembers("userTrust:" + account);
 	for(var i =0;i<gateways.length;i++){
 		var dev = {};
 		dev.id = gateways[i];
-		dev.name = await redis.hget("device:" + gateways[i],"name");
-		result.push(dev);
+		var val = await redis.hmget("device:" + gateways[i],"name","image");
+		dev.name = val[0];
+		dev["image"] = val[1];
+		var gateKeys = await redis.keys("userGate:*");
+		dev.trust = 0;
+		for(var j = 0;j < gateKeys.length;j++){
+			if(await redis.sismember(gateKeys[j],gateways[i])){
+				var user = gateKeys[i].split(":");
+				dev.trust = user[1];
+				break;
+			}
+		}
+		var trust = await redis.hmget("users:" + dev.trust,"name","image");
+		dev.trustName = trust[0];
+		dev.trustImage= trust[1];
+		trustGate.push(dev);
 	}
+	result["trust"] = trustGate;
 	ctx.body = result;
 });
 // 获取网关下的设备
@@ -127,21 +155,21 @@ router.post('/', async function (ctx, next) {
 		return false;
 	}
 	// 是否是自己家的网关
-	var isExist = await redis.sismember("userGate:" + account,gateId);
+/*	var isExist = await redis.sismember("userGate:" + account,gateId);
 	if(!isExist){
 	
-	}
+	}*/
 	var val = await  redis.hmget("device:" + gateId,"type","trust");
 	if(val[0] != 0){
 		throw new ApiError(ApiError.DEVICE_TYPE_ERROR);
 		return false;
 	}
-	if(val[1]){
+	/*if(val[1]){
 		throw new ApiError(ApiError.REPEAT_SETTINGS);
 		return false;
-	}
+	}*/
 	await redis.sadd("userTrust:" + trustAccount,gateId);
-	await redis.hset("device:" + gateId,"trust",trustAccount);
+	await redis.sadd("deviceTrust:" + gateId,trustAccount);
 	await  redis.save();
 	ctx.body = {};
 });
@@ -188,7 +216,7 @@ router.delete('/:id', async function (ctx, next) {
 		return false;
 	}
 	await redis.srem("userTrust:" + trust,gId);
-	await redis.hset("device:" + gId,"trust","");
+	await redis.srem("deviceTrust:" + gId,trust);
 	await  redis.save();
 	ctx.body = {};
 });

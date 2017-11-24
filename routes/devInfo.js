@@ -24,6 +24,24 @@ var socketIo = require("../utils/webSocketHelper");
 var CMD = require("../middlewares/apiCmd");
 var eventPool = require("../utils/eventPoolHelper");
 
+var path = require('path');
+var fs = require("fs");
+var imgPath = path.resolve(__dirname, '..') + "/deviceType/";
+const multer = require('koa-multer');//加载koa-multer模块
+//配置
+var storage = multer.diskStorage({
+	//文件保存路径
+	destination: function (req, file, cb) {
+		cb(null, 'uploads/')
+	},
+	//修改文件名称
+	filename: function (req, file, cb) {
+		var fileFormat = (file.originalname).split(".");
+		cb(null,shortId.gen() + "." + fileFormat[fileFormat.length - 1]);
+	}
+});
+//加载配置
+var upload = multer({ storage: storage });
 // getui
 //
 //
@@ -35,7 +53,7 @@ var eventPool = require("../utils/eventPoolHelper");
 // var tran = new Tran();
 // 获取设备
 router.get('/', async function (ctx, next) {
-    var query = ctx.request.query;
+	var query = ctx.request.query;
     var token = query.token;
     if(!token){
         throw new ApiError(ApiError.USER_NOT_LOGIN);
@@ -46,57 +64,110 @@ router.get('/', async function (ctx, next) {
         throw new ApiError(ApiError.USER_TOKEN_EXPIRE);
         return false;
     }
+    
     // 获取设备
     var result = [];
     var gateways = await  redis.smembers("userGate:" + account);
     for(let i = 0;i<gateways.length;i++){
-        var gVal = await redis.hmget("device:" + gateways[i],"name","state");
+        var gVal = await redis.hmget("device:" + gateways[i],"name","state","image");
         var gate = {};
         gate["gName"] = gVal[0];;
         gate["gId"] = gateways[i];
         gate["name"] = gVal[0];
         gate["state"] = gVal[1];
+	    gate["image"] = gVal[2];
         gate["id"] = gateways[i];
 	    gate["type"] = 0;
-        result.push(gate);
+	    gate["data"]=[];
         var devs = await redis.smembers("gatewaySensors:" + gate.gId); // 设备集
         for(let j = 0;j< devs.length;j++){
-            var val= await redis.hmget("device:" + devs[j],"name","state","type");
-            var dev = {};
-            dev["gName"] = gate.gName;
-            dev["gId"] = gate.gId;
-            dev["name"] = val[0];
-            dev["state"] = val[1];
-            dev["id"] = devs[j];
-	        dev["type"] = val[2];
-            result.push(dev);
+            let val= await redis.hmget("device:" + devs[j],"name","state","type","mac","image");
+            if(val[3] != ""){
+	            var dev = {};
+	            /*dev["gName"] = gate.gName;
+	            dev["gId"] = gate.gId;*/
+	            dev["name"] = val[0];
+	            dev["state"] = val[1];
+	            dev["id"] = devs[j];
+	            dev["type"] = val[2];
+	            dev["image"] = val[4];
+	            gate.data.push(dev);
+            }
         }
+	    result.push(gate);
     }
     gateways = await  redis.smembers("userTrust:" + account);// 网管集
     for(let i = 0;i<gateways.length;i++){
-        var gVal = await redis.hmget("device:" + gateways[i],"name","state");;
+        let gVal = await redis.hmget("device:" + gateways[i],"name","state","image");
         var gate = {};
         gate["gName"] = gVal[0];;
         gate["gId"] = gateways[i];
         gate["name"] = gVal[0];
         gate["state"] = gVal[1];
+        gate["image"] = gVal[2];
         gate["id"] = gateways[i];
         gate["type"] = 0;
-        result.push(gate);
+	    gate["data"]=[];
         var devs = await redis.smembers("gatewaySensors:" + gate.gId); // 设备集
         for(let j = 0;j< devs.length;j++){
-            var val= await redis.hmget("device:" + devs[j],"name","state","type");
-            var dev = {};
-            dev["gName"] = gate.gName;
-            dev["gId"] = gate.gId;
-            dev["name"] = val[0];
-            dev["state"] = val[1];
-            dev["id"] = devs[j];
-	        dev["type"] = val[2];
-            result.push(dev);
+            var val= await redis.hmget("device:" + devs[j],"name","state","type","mac","image");
+	        if(val[3] != "") {
+		        var dev = {};
+		        1
+		        dev["name"] = val[0];
+		        dev["state"] = val[1];
+		        dev["id"] = devs[j];
+		        dev["type"] = val[2];
+		        dev["image"] = val[4];
+		        gate.data.push(dev);
+	        }
         }
+	    result.push(gate);
     }
     ctx.body = result;
+});
+/*router.get('/:id', async function (ctx, next) {
+	var query = ctx.request.query;
+	var token = query.token;
+	if(!token){
+		throw new ApiError(ApiError.USER_NOT_LOGIN);
+		return false;
+	}
+	var account = await redis.get("token:" + token);
+	if(!account){
+		throw new ApiError(ApiError.USER_TOKEN_EXPIRE);
+		return false;
+	}
+	var devId =ctx.params.id;
+	let val= await redis.hmget("device:" + devId,"name","state","type","mac","image");
+	var dev = {};
+	dev["name"] = val[0];
+	dev["state"] = val[1];
+	dev["type"] = val[2];
+	dev["image"] = val[4];
+	ctx.body = dev;
+});*/
+// 获取设备类型
+router.get('/type', async function (ctx, next) {
+	var query = ctx.request.query;
+	var token = query.token;
+	if(!token){
+		throw new ApiError(ApiError.USER_NOT_LOGIN);
+		return false;
+	}
+	var account = await redis.get("token:" + token);
+	if(!account){
+		throw new ApiError(ApiError.USER_TOKEN_EXPIRE);
+		return false;
+	}
+	// 获取设备
+	var result = [];
+	var keys = await  redis.keys("deviceType:*");
+	for(var i = 0; i< keys.length;i++){
+		var value = await redis.hgetall(keys[i]);
+		result.push(value);
+	}
+	ctx.body = result;
 });
 // 获取设备的历史信息
 router.get('/:id', async function (ctx, next) {
@@ -247,7 +318,7 @@ router.get('/question/:id', async function (ctx, next) {
 // 接收网管服务器发送来的信息
 redis.sub.subscribe('alert','heart', 'offLine','onLine','replyAlarmRelease',
 	"replyReleaseBindMac",'replyBindMac','replySceneSetting','attRead','attSetting','zigRead','state',
-	'zigSetting',"devEnable",function (err) {
+	'zigSetting',"devEnable","sceneRead",function (err) {
 
 });
 // receive message
@@ -335,43 +406,14 @@ redis.sub.on('message',async function (channel, message) {
 			eventPool.trigger("devEnable",message);
 		}
 			break;
+		case 'sceneRead':{
+			eventPool.trigger("sceneRead",message);
+		}
+			break;
 		default:
 			break
 	}
 	
 });
 
-setInterval(async function () {
-	let keys = await redis.keys("device:*");
-	for(let i =0;i<keys.length;i++){
-		let gateway = await redis.hmget(keys[i],'type','state','on');
-		if(Number(gateway[0]) == 0){
-			if(gateway[1] == "0"){
-				var ids = keys[i].split(":");
-				var cIds = await redis.smembers("gateTui:" + ids[1]);
-				for(let j =0;j<cIds.length;j++){
-					// tran.sendMessage("离线",{cmd: "offLine", data: {id: ids[1]}},cIds[j]);
-				}
-				continue;
-			}
-			if(gateway[2]){
-				var oldTime = Number(gateway[2]) + 20000; // 20 妙
-				var nowTime = Date.parse(new Date());
-				if(nowTime>oldTime){
-					var ids = keys[i].split(":");
-					var cIds = await redis.smembers("gateTui:" + ids[1]);
-					for(let j =0;j<cIds.length;j++){
-					}
-						// tran.sendMessage("离线",{cmd: "offLine", data: {id: ids[1]}},cIds[j]);
-					}
-				}
-			} else{
-				var ids = keys[i].split(":");
-				var cIds = await redis.smembers("gateTui:" + ids[1]);
-				for(let j =0;j<cIds.length;j++){
-					// tran.sendMessage("离线",{cmd: "offLine", data: {id: ids[1]}},cIds[j]);
-				}
-			}
-		}
-	},1000);
 module.exports = router;
